@@ -1,0 +1,17 @@
+contract Dummy;
+
+backend dummy_backend {
+    implements Dummy;
+}
+
+module DummyModule {
+    use Dummy backend=dummy_backend;
+    sources {
+        "dummy.c"
+    }
+}
+
+root App {
+    type executable;
+    use DummyModule;
+}
