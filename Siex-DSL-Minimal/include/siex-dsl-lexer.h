@@ -15,9 +15,10 @@ typedef struct lexer {
   const char* start;
   const char* cursor;
   const char* end;
+  source_location location;
 } lexer;
 
-int init_lexer(lexer* lex, char* filename);
+int init_lexer(lexer* lex, const char* filename);
 int free_lexer(lexer* lex);
 
 char lexer_next_char(lexer* lex);

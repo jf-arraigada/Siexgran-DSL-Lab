@@ -5,10 +5,12 @@
 extern "C" {
 #endif // __cplusplus
 
+#include "siex-dsl-common.h"
+
 #include <stddef.h>
 #include <stdlib.h>
 
-typedef enum {
+typedef enum token_type {
   TOK_IDENTIFIER,
   TOK_STRING,
   TOK_NUMBER,
@@ -26,7 +28,7 @@ typedef enum {
 
   TOK_LBRACE,
   TOK_RBRACE,
-  TOK_COLON,
+  TOK_COMMA,
   TOK_SEMICOLON,
   TOK_EQUAL,
 } token_type;
@@ -35,6 +37,7 @@ typedef struct token {
   token_type type;
   const char* token_start;
   size_t length;
+  source_location location;
 } token;
 
 #ifdef __cplusplus

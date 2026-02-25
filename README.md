@@ -1,6 +1,6 @@
-# Sigran DSL Lab
+# Siexgran DSL Lab
 
-Experimental laboratory for designing and implementing Domain-Specific Languages (DSLs) for the Sigran ecosystem.
+Experimental laboratory for designing and implementing Domain-Specific Languages (DSLs) for the Siexgran ecosystem.
 
 This repository is dedicated to exploring different language designs, lexer/parser architectures, and compiler construction strategies.  
 Multiple independent DSL implementations may coexist here, each version representing a different design iteration or experiment.
@@ -30,9 +30,10 @@ They represent experimental stages and architectural exploration.
 - Keyword recognition
 - Token abstraction
 - Basic project structure
+- Line/column tracking
+- Minimal diagnostic features
 
 Planned:
-- Line/column tracking
 - AST construction
 - Semantic analysis phase
 

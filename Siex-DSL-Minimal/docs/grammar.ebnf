@@ -1,0 +1,37 @@
+program         = { top_level_decl } ;
+
+top_level_decl  = contract_decl
+                | backend_decl
+                | module_decl
+                | root_decl ;
+
+contract_decl   = "contract" identifier ";" ;
+
+backend_decl    = "backend" identifier "{"
+                      "implements" identifier ";"
+                  "}" ;
+
+module_decl     = "module" identifier "{"
+                      { module_stmt }
+                  "}" ;
+
+module_stmt     = use_stmt
+                | sources_block ;
+
+use_stmt        = "use" identifier [ "backend" "=" identifier ] ";" ;
+
+sources_block   = "sources" "{"
+                      { string_literal }
+                  "}" ;
+
+root_decl       = "root" identifier "{"
+                      root_stmt
+                  "}" ;
+
+root_stmt       = type_stmt
+                | use_stmt ;
+
+type_stmt       = "type" identifier ";" ;
+
+identifier      = /* token IDENTIFIER */ ;
+string_literal  = /* token STRING */ ;

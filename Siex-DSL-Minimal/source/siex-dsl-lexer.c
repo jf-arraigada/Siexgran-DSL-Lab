@@ -35,11 +35,12 @@ static char* read_file(const char* filename, size_t* file_size)
   return buffer;
 }
 
-static token make_token(token_type type, const char* start, size_t length) {
+static token make_token(token_type type, const char* start, size_t length, source_location location) {
   token t;
   t.type = type;
   t.token_start = start;
   t.length = length;
+  t.location = location;
   return t;
 }
 
@@ -94,7 +95,7 @@ static token_type check_keyword(const char* start, size_t length) {
     return TOK_IDENTIFIER;
 }
 
-int init_lexer(lexer *lex, char *filename) {
+int init_lexer(lexer *lex, const char *filename) {
   if(!lex || !filename) return 1;
 
   size_t file_size;
@@ -105,6 +106,8 @@ int init_lexer(lexer *lex, char *filename) {
   lex->cursor = lex->file;
   lex->start = lex->cursor;
   lex->end = lex->start + file_size;
+  lex->location.line = 1;
+  lex->location.column = 1;
 
   return 0;
 }
@@ -121,8 +124,18 @@ char lexer_peek_char(lexer* lex) {
 }
 
 char lexer_next_char(lexer *lex) {
-  if(!lex) return '\0';
-  return *lex->cursor++;
+  if(!lex || lex->cursor >= lex->end) return '\0';
+  char c = *lex->cursor++;
+
+  if(c == '\n') {
+    lex->location.line++;
+    lex->location.column = 1;
+  }
+  else {
+    lex->location.column++;
+  }
+
+  return c;
 }
 
 token lexer_next_token(lexer *lex) {
@@ -130,31 +143,32 @@ token lexer_next_token(lexer *lex) {
   
   // NON EOF COMPROBATION
   if (lex->cursor >= lex->end) {
-    return make_token(TOK_EOF, lex->cursor, 0);
+    return make_token(TOK_EOF, lex->cursor, 0, lex->location);
   }
   
   // TEMPORAL VARIABLES INITIALITION
   const char* start = lex->cursor;
   size_t length = 0;
+  source_location token_location = lex->location;
   char c = lexer_peek_char(lex);
 
   // ONE-CHAR CASES
   switch (c) {
     case '{':
       lexer_next_char(lex);
-      return make_token(TOK_LBRACE, start, 1);
+      return make_token(TOK_LBRACE, start, 1, token_location);
     case '}':
       lexer_next_char(lex);
-      return make_token(TOK_RBRACE, start, 1);
+      return make_token(TOK_RBRACE, start, 1, token_location);
     case ',':
       lexer_next_char(lex);
-      return make_token(TOK_COLON, start, 1);
+      return make_token(TOK_COMMA, start, 1, token_location);
     case ';':
       lexer_next_char(lex);
-      return make_token(TOK_SEMICOLON, start, 1);
+      return make_token(TOK_SEMICOLON, start, 1, token_location);
     case '=':
       lexer_next_char(lex);
-      return make_token(TOK_EQUAL, start, 1);
+      return make_token(TOK_EQUAL, start, 1, token_location);
     default:
       break;
   }
@@ -171,7 +185,7 @@ token lexer_next_token(lexer *lex) {
 
     token_type type = check_keyword(start, length);
 
-    return make_token(type, start, length);
+    return make_token(type, start, length, lex->location);
   }
 
   // TOK_NUMBER CASE
@@ -183,7 +197,7 @@ token lexer_next_token(lexer *lex) {
     }
 
     length = lex->cursor - start;
-    return make_token(TOK_NUMBER, start, length);
+    return make_token(TOK_NUMBER, start, length, lex->location);
   }
 
   // TOK_STRING CASE
@@ -197,9 +211,9 @@ token lexer_next_token(lexer *lex) {
     if(lex->cursor < lex->end) lexer_next_char(lex);
     
     length = lex->cursor - start;
-    return make_token(TOK_STRING, start, length);
+    return make_token(TOK_STRING, start, length, lex->location);
   }
 
   lexer_next_char(lex);
-  return make_token(TOK_UNKNOWN, start, 1);
+  return make_token(TOK_UNKNOWN, start, 1, lex->location);
 }
