@@ -43,56 +43,55 @@ static token make_token(token_type type, const char* start, size_t length, sourc
   t.location = location;
   return t;
 }
-
 static void skip_whitespace(lexer* lex) {
-    while (1) {
-        char c = lexer_peek_char(lex);
-        if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-            lexer_next_char(lex);
-        } else {
-            break;
-        }
+  for (;;) {
+
+    char c = lexer_peek_char(lex);
+
+    // comment
+    if (c == '/' && lexer_peek_next(lex) == '/') {
+      while (lexer_peek_char(lex) != '\n' &&
+             lexer_peek_char(lex) != '\0') {
+        lexer_next_char(lex);
+      }
+      continue;
     }
+
+    // whitespace
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+      lexer_next_char(lex);
+      continue;
+    }
+
+    break;
+  }
 }
 
 static token_type check_keyword(const char* start, size_t length) {
-    switch (length) {
-        case 3:
-            if (strncmp(start, "use", 3) == 0)
-                return TOK_KEYWORD_USE;
-            break;
+  switch (length) {
+    case 4:
+      if (strncmp(start, "need", 4) == 0)
+        return TOK_KEYWORD_NEED;
+      if (strncmp(start, "bind", 4) == 0)
+        return TOK_KEYWORD_BIND;
+      break;
 
-        case 4:
-            if (strncmp(start, "root", 4) == 0)
-                return TOK_KEYWORD_ROOT;
-            if (strncmp(start, "type", 4) == 0)
-                return TOK_KEYWORD_TYPE;
-            break;
+    case 6:
+      if (strncmp(start, "module", 6) == 0)
+        return TOK_KEYWORD_MODULE;
+      if (strncmp(start, "target", 6) == 0)
+        return TOK_KEYWORD_TARGET;
+      break;
 
-        case 6:
-            if (strncmp(start, "module", 6) == 0)
-                return TOK_KEYWORD_MODULE;
-            if (strncmp(start, "source", 6) == 0)
-                return TOK_KEYWORD_SOURCE;
-            break;
+    case 7:
+      if (strncmp(start, "backend", 7) == 0)
+        return TOK_KEYWORD_BACKEND;
+      if (strncmp(start, "sources", 7) == 0)
+        return TOK_KEYWORD_SOURCES;
+      break;
+  }
 
-        case 7:
-            if (strncmp(start, "backend", 7) == 0)
-                return TOK_KEYWORD_BACKEND;
-            break;
-
-        case 8:
-            if (strncmp(start, "contract", 8) == 0)
-                return TOK_KEYWORD_CONTRACT;
-            break;
-
-        case 9:
-            if (strncmp(start, "implement", 9) == 0)
-                return TOK_KEYWORD_IMPLEMENT;
-            break;
-    }
-
-    return TOK_IDENTIFIER;
+  return TOK_IDENTIFIER;
 }
 
 int init_lexer(lexer *lex, const char *filename) {
@@ -138,6 +137,12 @@ char lexer_next_char(lexer *lex) {
   return c;
 }
 
+char lexer_peek_next(lexer* lex) {
+    if (!lex || lex->cursor + 1 >= lex->end) return '\0';
+    return lex->cursor[1];
+}
+
+
 token lexer_next_token(lexer *lex) {
   skip_whitespace(lex);
   
@@ -169,6 +174,9 @@ token lexer_next_token(lexer *lex) {
     case '=':
       lexer_next_char(lex);
       return make_token(TOK_EQUAL, start, 1, token_location);
+    case '.':
+      lexer_next_char(lex);
+      return make_token(TOK_DOT, start, 1, token_location);
     default:
       break;
   }
@@ -185,7 +193,7 @@ token lexer_next_token(lexer *lex) {
 
     token_type type = check_keyword(start, length);
 
-    return make_token(type, start, length, lex->location);
+    return make_token(type, start, length, token_location);
   }
 
   // TOK_NUMBER CASE
@@ -197,7 +205,7 @@ token lexer_next_token(lexer *lex) {
     }
 
     length = lex->cursor - start;
-    return make_token(TOK_NUMBER, start, length, lex->location);
+    return make_token(TOK_NUMBER, start, length, token_location);
   }
 
   // TOK_STRING CASE
@@ -208,10 +216,14 @@ token lexer_next_token(lexer *lex) {
       lexer_next_char(lex);
     }
 
+    if (lexer_peek_char(lex) != '"') {
+        return make_token(TOK_UNKNOWN, start, lex->cursor - start, token_location);
+    }
+
     if(lex->cursor < lex->end) lexer_next_char(lex);
     
     length = lex->cursor - start;
-    return make_token(TOK_STRING, start, length, lex->location);
+    return make_token(TOK_STRING, start, length, token_location);
   }
 
   lexer_next_char(lex);
