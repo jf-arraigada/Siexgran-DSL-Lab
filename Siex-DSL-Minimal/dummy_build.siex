@@ -1,17 +1,18 @@
-contract Dummy;
+backend pq;
+backend ring;
 
-backend dummy_backend {
-    implements Dummy;
+module scheduler {
+    need queue;
+    need timer;
 }
 
-module DummyModule {
-    use Dummy backend=dummy_backend;
-    sources {
-        "dummy.c"
-    }
+module logger {
+    need queue;
 }
 
-root App {
-    type executable;
-    use DummyModule;
-}
+bind scheduler.queue = pq.heap;
+bind scheduler.timer = ring;
+
+bind logger.queue = pq.intrusive;
+
+target linux;
