@@ -1,0 +1,30 @@
+root = executable;
+
+backend pq {
+    impl heap;
+    impl intrusive;
+}
+
+backend ring;
+
+module scheduler {
+    need queue;
+    need timer;
+    sources {
+        // aquí podrían ir tus archivos .c o .cpp si los tenés
+    }
+}
+
+module logger {
+    need queue;
+    sources {
+        // archivos fuente del logger
+    }
+}
+
+bind scheduler.queue = pq.heap;
+bind scheduler.timer = ring;
+
+bind logger.queue = pq.intrusive;
+
+target os;
