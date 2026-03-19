@@ -1,4 +1,4 @@
-#include "../include/siex-dsl-lexer.h"
+#include <siex-dsl/lexer.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -74,6 +74,9 @@ static token_type check_keyword(const char* start, size_t length) {
         return TOK_KEYWORD_NEED;
       if (strncmp(start, "bind", 4) == 0)
         return TOK_KEYWORD_BIND;
+      if (strncmp(start, "root", 4) == 0)
+        return TOK_KEYWORD_ROOT;
+      if (strncmp(start, "impl", 4) == 0)
       break;
 
     case 6:

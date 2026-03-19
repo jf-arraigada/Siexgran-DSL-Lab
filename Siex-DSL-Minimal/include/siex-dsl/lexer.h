@@ -5,7 +5,7 @@
 extern "C" {
 #endif // !__cplusplus
 
-#include "siex-dsl-token.h"
+#include <siex-dsl/token.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
@@ -23,6 +23,7 @@ int free_lexer(lexer* lex);
 
 char lexer_next_char(lexer* lex);
 char lexer_peek_char(lexer* lex);
+char lexer_peek_next(lexer* lex);
 
 token lexer_next_token(lexer* lex);
 

@@ -5,7 +5,7 @@
 extern "C" {
 #endif // __cplusplus
 
-#include "siex-dsl-common.h"
+#include <siex-dsl/common.h>
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -17,12 +17,14 @@ typedef enum token_type {
   TOK_EOF,
   TOK_UNKNOWN,
 
+  TOK_KEYWORD_ROOT,
   TOK_KEYWORD_MODULE,
   TOK_KEYWORD_BACKEND,
   TOK_KEYWORD_NEED,
   TOK_KEYWORD_BIND,
   TOK_KEYWORD_TARGET,
   TOK_KEYWORD_SOURCES,
+  TOK_KEYWORD_IMPL,
 
 
   TOK_LBRACE,

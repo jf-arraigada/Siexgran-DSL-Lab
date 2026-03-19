@@ -9,12 +9,18 @@ top_level_decl  =
     | backend_decl
     | target_decl
     | bind_decl
+    | root_decl
+;
+
+root_decl       =
+    "root" identifier "=" ("executable" | "library" | "plugin") ";"
 ;
 
 module_decl     =
     "module" identifier "{"
         { module_stmt }
-    "}" ;
+    "}" ";"
+;
 
 module_stmt     =
       need_decl
@@ -26,7 +32,14 @@ need_decl       =
 ;
 
 backend_decl    =
-    "backend" identifier ";"
+    "backend" identifier (
+        ";" 
+      | "{" { impl_decl } "}" ";"
+    )
+;
+
+impl_decl       =
+    "impl" identifier ";"
 ;
 
 bind_decl       =
@@ -48,7 +61,8 @@ target_decl     =
 sources_block   =
     "sources" "{"
         { string_literal }
-    "}" ;
+    "}"
+;
 
 identifier      = /* IDENT */ ;
 string_literal  = /* STRING */ ;
@@ -57,6 +71,9 @@ string_literal  = /* STRING */ ;
 
 Example of use
 ```Siex
+
+root My_app = executable;
+
 backend pq;
 backend ring;
 

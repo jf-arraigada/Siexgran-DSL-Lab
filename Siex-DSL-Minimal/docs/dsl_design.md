@@ -46,21 +46,24 @@ The lexer produces the following categories of tokens.
 
 ### Keywords
 
+- `root`
 - `module`
 - `backend`
 - `target`
 - `sources`
 - `need`
 - `bind`
+- `impl`
 
 ### Identifiers
 *[a-zA-Z_][a-zA-Z0-9_]*
 
 Used for:
 
+- root names
 - module names
 - backend names
-- strategy names
+- implementations names
 - symbolic references
 
 ### Literals
@@ -100,19 +103,21 @@ This IR is effectively:
 ### Conceptual Structure
 ```
 program
+├── root
+│   └── type (executable | library | plugin)
 ├── target
 ├── modules
 │   ├── sources
 │   └── dependencies
 ├── backends
-│   └── strategies
+│   └── implementations
 └── bindings
 ```
 
 ### Key Relation
 
 Bindings form a critical triple:
-**module → backend → strategy**
+**module → backend → impl**
 
 
 This defines how each module obtains a concrete implementation.
@@ -134,7 +139,7 @@ which must later be satisfied by a binding.
 
 Bindings connect:
 
-    module.service → backend.strategy
+    module.service → backend.impl
 
 ---
 
@@ -143,13 +148,13 @@ Bindings connect:
 ```c
 typedef struct {
     char* name;
-} siex_strategy;
+} siex_impl;
 
 typedef struct {
     char* name;
 
-    siex_strategy* strategies;
-    size_t strategy_count;
+    siex_impl* implementations;
+    size_t impl_count;
 } siex_backend;
 
 typedef struct {
@@ -165,7 +170,7 @@ typedef struct {
 typedef struct {
     char* module;
     char* backend;
-    char* strategy;
+    char* impl;
 } siex_binding;
 
 typedef enum {
@@ -173,8 +178,16 @@ typedef enum {
     SIEX_TARGET_OS
 } siex_target;
 
+typedef enum {
+    SIEX_ROOT_EXECUTABLE,
+    SIEX_ROOT_LIBRARY,
+    SIEX_ROOT_PLUGIN
+} siex_root_type;
+
+
 typedef struct {
     siex_target target;
+    siex_root_type root_type;
 
     siex_module* modules;
     size_t module_count;
@@ -186,6 +199,9 @@ typedef struct {
     size_t binding_count;
 } siex_program;
 ```
+
+> [!NOTE]
+> The root_type field indicates the root artifact being built and is used by the code generation phase to determine the creation of main(), linking, and appropriate wrappers.
 
 This structure represents the semantic IR of the DSL.
 You can see more about the grammar of Siex DSL on:
@@ -199,11 +215,13 @@ After parsing, the compiler performs:
 
 ### Name Resolution 
 
+- validate root declaration: ensure exactly one root is declared and its type is valid.
+
 - resolve module references
 
 - resolve backend references
 
-- resolve strategies
+- resolve impl references
 
 - detect undefined symbols
 
@@ -267,7 +285,7 @@ The compiler may report errors such as:
 
 - binding to an undefined module
 - binding to an undefined backend
-- unknown strategy
+- unknown implementation
 - unsatisfied module service
 - dependency cycles between modules
 - incompatible backend for selected target

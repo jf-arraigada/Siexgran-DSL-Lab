@@ -5,7 +5,8 @@
 extern "C" {
 #endif // __cplusplus
 
-#include "siex-dsl-common.h"  
+#include <siex-dsl/common.h>  
+#include <stdio.h>
 
 typedef enum diagnostic_type {
   DIAGNOSTIC_ERROR,
@@ -14,13 +15,17 @@ typedef enum diagnostic_type {
 } diagnostic_type;
 
 typedef struct diagnostic {
-  source_location location;
   diagnostic_type type;
+  source_location location;
   const char* message;
 } diagnostic;
 
 //diagnostic make_diagnostic_message(source_location location, const char* message);
-void diagnostic_report(diagnostic* diag);
+//void diagnostic_report(diagnostic* diag);
+void diagnostic_report(FILE* out, diagnostic_type type, source_location location, const char* message);
+void diagnostic_error(source_location location, const char* message);
+void diagnostic_warning(source_location location, const char* message);
+void diagnostic_note(source_location location, const char* message);
 
 #ifdef __cplusplus
 }

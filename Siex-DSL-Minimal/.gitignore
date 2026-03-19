@@ -1,0 +1,43 @@
+# ==========================
+# Archivos generados por build
+# ==========================
+/build/
+*.o
+*.obj
+*.so
+*.dll
+*.exe
+*.out
+*.log
+
+# ==========================
+# CMake específicos
+# ==========================
+CMakeFiles/
+CMakeCache.txt
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# ==========================
+# Archivos de editores y OS
+# ==========================
+*~
+*.swp
+.DS_Store
+.idea/
+.vscode/
+*.bak
+
+# ==========================
+# Archivos temporales o de test
+# ==========================
+*.tmp
+*.temp
+*.stackdump
+
+# ==========================
+# Archivos de documentación generados
+# ==========================
+/docs/*.html
+/docs/*.pdf
