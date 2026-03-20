@@ -2,42 +2,62 @@
 
 Experimental laboratory for designing and implementing Domain-Specific Languages (DSLs) for the Siexgran ecosystem.
 
-This repository is dedicated to exploring different language designs, lexer/parser architectures, and compiler construction strategies.  
-Multiple independent DSL implementations may coexist here, each version representing a different design iteration or experiment.
+This repository explores language design, compiler architecture, and low-level tooling with a strong focus on performance, control, and minimal abstractions.
+
+Multiple independent DSL implementations may coexist here, each representing a different stage in the evolution of the language.
 
 ## Structure
 
 Each DSL version is contained in its own directory:
 
-- `Siex-DSL-v-0.0.1/` — Initial zero-copy lexer implementation
-- (Future versions will appear as the design evolves)
+- `Siex-DSL-Minimal/` — Current experimental implementation
+- (Future iterations will appear as the design evolves)
 
 These versions are not necessarily backward compatible.  
-They represent experimental stages and architectural exploration.
+They are intended as architectural experiments.
+
+## Philosophy
+
+- Zero-copy wherever possible
+- Explicit over implicit behavior
+- Minimal abstractions, maximum control
+- Composable modules instead of monolithic systems
+- Designed to integrate with Siexgran Platform
 
 ## Goals
 
 - Experiment with zero-copy lexers
-- Explore parser architectures (LL, recursive descent, etc.)
-- Design AST/IR representations
-- Evaluate different semantic analysis strategies
-- Iterate over DSL syntax design
+- Explore parser architectures (recursive descent, LL-style parsing)
+- Design IR structures for modular systems
+- Implement semantic analysis (resolver)
+- Build dependency graphs for modular builds
+- Iterate on DSL syntax and usability
 
 ## Current Status
 
-`Siex-DSL-v-0.0.1`:
-- Zero-copy lexical analyzer
-- Keyword recognition
-- Token abstraction
-- Basic project structure
-- Line/column tracking
-- Minimal diagnostic features
+### Siex-DSL-Minimal (v0.3.0)
 
-Planned:
-- AST construction
-- Semantic analysis phase
+- Zero-copy lexical analyzer
+- Recursive descent parser
+- Modular grammar with:
+  - modules, backends, bindings, targets, root
+- Support for:
+  - `sources` and `includes` blocks
+  - target-level default configuration
+- Arena-based memory management
+- Vector-based dynamic containers
+- IR design for modular dependency systems
+- Documentation aligned with grammar and implementation
+
+### Next Steps
+
+- Semantic resolver (dependency + binding validation)
+- Build graph generation
+- Code generation and backend integration
+- Multi-file `.siex` support (modular composition)
+- Improved diagnostics and developer experience
 
 ---
 
-This repository is experimental by design.
+This repository is experimental by design.  
 Expect iteration, refactoring, and architectural evolution.

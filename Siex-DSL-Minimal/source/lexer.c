@@ -1,3 +1,4 @@
+#include "siex-dsl/token.h"
 #include <siex-dsl/lexer.h>
 #include <string.h>
 #include <ctype.h>
@@ -91,6 +92,10 @@ static token_type check_keyword(const char* start, size_t length) {
         return TOK_KEYWORD_BACKEND;
       if (strncmp(start, "sources", 7) == 0)
         return TOK_KEYWORD_SOURCES;
+      break;
+    case 8:
+      if (strncmp(start, "includes", 8) == 0) 
+        return TOK_KEYWORD_INCLUDES;
       break;
   }
 

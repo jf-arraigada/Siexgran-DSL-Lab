@@ -2,7 +2,9 @@
 #include <siex-dsl/parser_internal.h>
 
 static int parse_need_decl(parser* p, siex_module* module);
-static int parse_sources_block(parser* p, siex_module* module);
+static int parse_module_sources_block(parser* p, siex_module* module);
+static int parse_module_include_block(parser* p, siex_module* module);
+
 
 int parse_module_decl(parser *p) {
   token t = parser_peek(p);
@@ -38,6 +40,7 @@ int parse_module_decl(parser *p) {
 
   vector_init_t(&module->needs, char*);
   vector_init_t(&module->sources, char*);
+  vector_init_t(&module->includes, char*);
 
   while ((t = parser_peek(p)).type != TOK_RBRACE && t.type != TOK_EOF) {
 
@@ -48,7 +51,11 @@ int parse_module_decl(parser *p) {
       break;
 
     case TOK_KEYWORD_SOURCES:
-      if (parse_sources_block(p, module) != 0)
+      if (parse_module_sources_block(p, module) != 0)
+        return 1;
+      break;
+    case TOK_KEYWORD_INCLUDES:
+      if (parse_module_include_block(p, module) != 0)
         return 1;
       break;
 
@@ -115,44 +122,15 @@ static int parse_need_decl(parser* p, siex_module* module) {
   return 0;
 }
 
-static int parse_sources_block(parser* p, siex_module* module) {
-  token t = parser_peek(p);
-
-  if (t.type != TOK_KEYWORD_SOURCES) {
-    parser_error(t, "Expected 'sources' keyword");
+static int parse_module_sources_block(parser* p, siex_module* module) {
+  if ((parse_block(p, module, MODULE_BLOCK, "sources")) != 0)
     return 1;
-  }
+  return 0;
+}
 
-  parser_next(p); // sources
-  t = parser_peek(p);
-
-  if (t.type != TOK_LBRACE) {
-    parser_error(t, "Expected '{' after sources");
+static int parse_module_include_block(parser* p, siex_module* module) {
+  if ((parse_block(p, module, MODULE_BLOCK, "includes")) != 0)
     return 1;
-  }
-
-  parser_next(p); // {
-
-  while ((t = parser_peek(p)).type != TOK_RBRACE && t.type != TOK_EOF) {
-
-    if (t.type != TOK_STRING) {
-      parser_error(t, "Expected string literal in sources");
-      return 1;
-    }
-
-    char* src = arena_strdup(&p->mem, t.token_start + 1, t.length - 2);
-    parser_next(p);
-
-    vector_push(&p->mem, &module->sources, &src);
-  }
-
-  if (t.type != TOK_RBRACE) {
-    parser_error(t, "Expected '}' after sources block");
-    return 1;
-  }
-
-  parser_next(p); // }
-
   return 0;
 }
 

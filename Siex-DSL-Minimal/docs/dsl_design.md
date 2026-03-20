@@ -51,6 +51,7 @@ The lexer produces the following categories of tokens.
 - `backend`
 - `target`
 - `sources`
+- `includes`
 - `need`
 - `bind`
 - `impl`
@@ -106,8 +107,11 @@ program
 ├── root
 │   └── type (executable | library | plugin)
 ├── target
+│   ├── sources
+│   └── includes
 ├── modules
 │   ├── sources
+│   ├── includes
 │   └── dependencies
 ├── backends
 │   └── implementations
@@ -163,6 +167,9 @@ typedef struct {
     char** sources;
     size_t source_count;
 
+    char** includes;
+    size_t include_count;
+
     char** needs;
     size_t need_count;
 } siex_module;
@@ -176,6 +183,16 @@ typedef struct {
 typedef enum {
     SIEX_TARGET_METAL,
     SIEX_TARGET_OS
+} siex_target_type;
+
+typedef struct {
+    siex_target_type type;
+
+    char** default_sources;
+    size_t sources_count;
+
+    char** default_includes;
+    size_t includes_count;
 } siex_target;
 
 typedef enum {
@@ -186,6 +203,8 @@ typedef enum {
 
 
 typedef struct {
+    char* root_name;
+
     siex_target target;
     siex_root_type root_type;
 

@@ -25,6 +25,7 @@ module_decl     =
 module_stmt     =
       need_decl
     | sources_block
+    | includes_block
 ;
 
 need_decl       =
@@ -55,11 +56,25 @@ bind_value      =
 ;
 
 target_decl     =
-    "target" identifier ";"
+    "target" identifier (
+        ";" 
+      | "{" { target_stmt } "}" ";"
+    )
+;
+
+target_stmt     =
+      (sources_block)
+    | (includes_block)
 ;
 
 sources_block   =
     "sources" "{"
+        { string_literal }
+    "}"
+;
+
+includes_block  =
+    "includes" "{"
         { string_literal }
     "}"
 ;

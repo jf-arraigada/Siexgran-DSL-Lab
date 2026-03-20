@@ -12,6 +12,12 @@ typedef enum {
   SIEX_TARGET_EMBEDDED,
   SIEX_TARGET_METAL,
   SIEX_TARGET_OS
+} siex_target_type;
+
+typedef struct {
+  siex_target_type type;
+  vector default_sources;
+  vector default_includes;
 } siex_target;
 
 typedef enum {
@@ -34,6 +40,7 @@ typedef struct {
   char* name;
 
   vector sources; // char*
+  vector includes; // char*
   vector needs;   // char*
 } siex_module;
 

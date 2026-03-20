@@ -7,6 +7,10 @@ extern "C" {
 
 #include <siex-dsl/parser.h> 
 
+typedef enum {
+  MODULE_BLOCK,
+  TARGET_BLOCK,
+} block_type;
 
 token parser_peek(parser *p);
 token parser_next(parser *p);
@@ -19,6 +23,7 @@ int parse_module_decl(parser *p);
 int parse_backend_decl(parser *p);
 int parse_bind_decl(parser *p);
 int parse_target_decl(parser *p);
+int parse_block(parser* p, void* block, block_type type, const char* keyword);
 
 #ifdef __cplusplus
 }
