@@ -21,21 +21,19 @@ Its purpose is NOT to express runtime logic but to describe:
 The compiler pipeline is:
 
 ```
-    DSL source
-    ↓
-    Lexer
-    ↓
-    Parser
-    ↓
-    Semantic Model (Build Graph / IR)
-    ↓
-    Resolver & Planner
-    ↓
-    Code Generator
-    ↓
-    Intermediate Build Directory
-    ↓
-    External Build Tool
+       DSL source files
+              ↓
+   Loader (handles imports)
+              ↓
+ Per-file parsing (arena-based IR)
+              ↓
+         Merge phase
+              ↓
+   Resolver (symbol linking)
+              ↓
+ Dependency graph construction
+              ↓
+       Code generation
 ```
 
 ---
@@ -55,21 +53,25 @@ The lexer produces the following categories of tokens.
 - `need`
 - `bind`
 - `impl`
+- `import`
+- `type`
+- `main`
+- `version`
+- `as`
 
 ### Identifiers
-*[a-zA-Z_][a-zA-Z0-9_]*
+`[a-zA-Z_][a-zA-Z0-9_]*`
 
 Used for:
 
 - root names
 - module names
 - backend names
-- implementations names
+- implementation names
 - symbolic references
 
 ### Literals
 
-- Integer numbers
 - String literals `"..."`
 
 ### Punctuation
@@ -79,267 +81,327 @@ Used for:
 - `;`
 - `.`
 - `=`
+- `::`
 
 ### Comments
 
 Single-line comments are supported:
 ```Siex
-//comment
+ // comment
 ```
+
 Whitespace is ignored.
 
 ---
 
-## Semantic Model (Build Graph)
+## Multi-File Architecture
 
-Unlike traditional compilers, Siex does **not require a generic AST**.
+Siex supports splitting configuration across multiple `.siex` files.
 
-Instead, parsing directly constructs a **semantic intermediate representation (IR)**,
-which models the architecture of the system.
+This is achieved via the `import` declaration:
 
-This IR is effectively:
+```Siex
+import "network.siex";
+import "drivers.siex" as drv;
+```
 
-> a build graph + backend dispatch configuration graph.
+Each file is parsed independently into its own arena.
+
+After parsing, all programs are merged and resolved globally.
+
+### Key Properties
+
+- Imports are recursive
+- Import paths are resolved relative to the declaring file
+- Aliases provide namespace disambiguation
+- Duplicate loads are avoided via loader deduplication (`hashmap`)
+- Symbols are globally visible after resolution
+
+---
+
+## Semantic Model (IR)
+
+Siex does **not build a generic AST**.
+
+Instead, parsing directly constructs a **semantic IR** using arenas.
+
+This IR represents:
+
+> a build graph + backend dispatch configuration
 
 ### Conceptual Structure
+
 ```
 program
+├── file (path, dir)
 ├── root
-│   └── type (executable | library | plugin)
+│   ├── type
+│   ├── entry (main module)
+│   └── version
 ├── target
-│   ├── sources
-│   └── includes
+│   ├── default_sources
+│   └── default_includes
+├── imports
 ├── modules
 │   ├── sources
 │   ├── includes
-│   └── dependencies
+│   └── needs
 ├── backends
 │   └── implementations
 └── bindings
 ```
 
-### Key Relation
+---
 
-Bindings form a critical triple:
-**module → backend → impl**
+## Binding Model
 
+Bindings define:
 
-This defines how each module obtains a concrete implementation.
+> module → backend[.impl]
 
-### Abstract Services
+Examples:
 
-A `need` declaration introduces an abstract service dependency.
+```Siex
+bind scheduler = pq.heap;
+bind logger = pq;
+```
 
-Services form a logical namespace local to each module.
+Meaning:
+
+- A module is assigned a backend
+- Optionally a specific implementation
+
+---
+
+## Namespace Model
+
+Symbols are uniquely identified using:
+
+```Siex
+file::name
+```
 
 Example:
+
 ```Siex
-    module scheduler {
-        need queue;
-    }
+logger.siex::formatter
 ```
-This means the module requires a service named `queue`,
-which must later be satisfied by a binding.
 
-Bindings connect:
+This prevents collisions across imported files.
 
-    module.service → backend.impl
+Internally:
+
+- built via `namespace_build`
+- hashed into `siex_symbol_id`
 
 ---
 
-## Suggested C Representation
+## Need Declaration (Alias Semantics)
 
-```c
-typedef struct {
-    char* name;
-} siex_impl;
-
-typedef struct {
-    char* name;
-
-    siex_impl* implementations;
-    size_t impl_count;
-} siex_backend;
-
-typedef struct {
-    char* name;
-
-    char** sources;
-    size_t source_count;
-
-    char** includes;
-    size_t include_count;
-
-    char** needs;
-    size_t need_count;
-} siex_module;
-
-typedef struct {
-    char* module;
-    char* backend;
-    char* impl;
-} siex_binding;
-
-typedef enum {
-    SIEX_TARGET_METAL,
-    SIEX_TARGET_OS
-} siex_target_type;
-
-typedef struct {
-    siex_target_type type;
-
-    char** default_sources;
-    size_t sources_count;
-
-    char** default_includes;
-    size_t includes_count;
-} siex_target;
-
-typedef enum {
-    SIEX_ROOT_EXECUTABLE,
-    SIEX_ROOT_LIBRARY,
-    SIEX_ROOT_PLUGIN
-} siex_root_type;
-
-
-typedef struct {
-    char* root_name;
-
-    siex_target target;
-    siex_root_type root_type;
-
-    siex_module* modules;
-    size_t module_count;
-
-    siex_backend* backends;
-    size_t backend_count;
-
-    siex_binding* bindings;
-    size_t binding_count;
-} siex_program;
+```Siex
+need module;
+need alias::module;
 ```
 
-> [!NOTE]
-> The root_type field indicates the root artifact being built and is used by the code generation phase to determine the creation of main(), linking, and appropriate wrappers.
+Interpretation:
 
-This structure represents the semantic IR of the DSL.
-You can see more about the grammar of Siex DSL on:
-[Grammar](./grammar.md)
+- `module` → same namespace
+- `alias::module` → imported namespace
 
+This avoids ambiguity across multiple imports.
 
 ---
+
+## Target Model
+
+```Siex
+target embedded;
+target os {
+    sources { "..." }
+    includes { "..." }
+};
+```
+
+Supported:
+
+- `embedded`
+- `metal`
+- `os`
+
+Target provides:
+
+- default sources
+- default include paths
+
+---
+
+## Parser Architecture
+
+The parser is:
+
+- recursive descent
+- single-token lookahead (`parser_peek`)
+- arena-based allocation
+- directly builds IR (no AST layer)
+
+### Key Design Decisions
+
+- No backtracking
+- Strict grammar enforcement
+- Early error reporting
+- Minimal abstraction overhead
+
+### Generic Block Parsing
+
+`sources` and `includes` use a shared parser:
+
+```C
+parse_block(...)
+```
+
+This reduces duplication between:
+
+- module blocks
+- target blocks
+
+---
+
 ## Post-Parsing Phases
 
-After parsing, the compiler performs:
+### 1. Loader
 
-### Name Resolution 
+Responsibilities:
 
-- validate root declaration: ensure exactly one root is declared and its type is valid.
-
-- resolve module references
-
-- resolve backend references
-
-- resolve impl references
-
-- detect undefined symbols
-
-### Dependency Graph Construction 
-
-- build module dependency DAG
-
-- detect cycles
-
-- compute build order
-
-### Dispatch Strategy Selection 
-
-Based on system target:
-
-- static dispatch for embedded targets
-
-- dynamic dispatch for OS targets
-
-See:
-[Dependency Strategy](./dependency_strategy.md)
+- resolve absolute paths
+- expand environment variables
+- deduplicate loaded files
+- recursively load imports
 
 ---
+
+### 2. Resolver
+
+Works globally across all programs.
+
+Responsibilities:
+
+- build symbol tables (using `hashmap`)
+- assign `siex_symbol_id`
+- resolve:
+  - modules
+  - backends
+  - implementations
+- validate bindings
+- resolve `need` dependencies
+- detect duplicates
+
+---
+
+### 3. Dependency Graph
+
+Builds a DAG of modules:
+
+- edges from `need`
+- cycle detection
+- topological ordering
+
+---
+
+### 4. Dispatch Strategy
+
+Depends on target:
+
+- embedded → static dispatch
+- os → dynamic dispatch
+- metal → configurable
+
+---
+
 ## Code Generation Output
-The compiler generates an **intermediate build directory**:
+
+The compiler produces:
 
 ```
 build/
  ├── wrapper_gen.h
  ├── modules/
  ├── backends/
- ├── generated_bindings/
+ ├── bindings/
  └── final_project/
- ```
-> [!INFO]
-> The final_project directory may contain:
->
-> - copied sources
-> - generated wrappers
-> - backend glue code
-> - unified build entry point
+```
 
-This directory can then be consumed by an external build system
-(e.g. Make, Ninja, CMake, custom tool).
+Contains:
+
+- generated wrappers
+- backend glue
+- unified entry point
+- copied sources
 
 ---
+
 ## Declaration Order
 
 Top-level declarations are order-independent.
 
-Bindings may reference modules and backends declared later.
-Name resolution is performed after parsing.
-This implies the parser stores symbolic references without resolving them immediately.
+Valid:
 
-A dedicated resolution phase validates and links all entities.
+```Siex
+bind A = B.impl;
+
+backend B {
+    impl impl;
+};
+
+module A { };
+```
+
+Resolution is deferred to the resolver phase.
 
 ---
+
 ## Semantic Errors
 
-The compiler may report errors such as:
+Examples:
 
-- binding to an undefined module
-- binding to an undefined backend
-- unknown implementation
-- unsatisfied module service
-- dependency cycles between modules
-- incompatible backend for selected target
+- undefined module in bind
+- undefined backend
+- missing implementation
+- invalid alias reference
+- duplicate symbols
+- dependency cycles
+- multiple root definitions
 
 ---
+
 ## Design Rationale
 
-Key properties of this architecture:
-
-- No runtime DSL interpreter required
-
-- Backend polymorphism resolved via code generation
-
-- Supports static or dynamic dispatch
-
-- Enables architecture validation before build
-
-- Scales to embedded and OS targets
-
-- Keeps modules backend-agnostic
+- No AST → simpler pipeline
+- Arena allocation → fast & cache-friendly
+- Explicit IR → easier codegen
+- Namespaced symbols → multi-file safe
+- Backend abstraction → flexible architecture
+- Declarative model → predictable builds
 
 ---
+
 ## Summary
 
-Siex DSL acts as:
+Siex DSL is:
 
-> a software architecture configurator and build graph generator.
+> a build graph + architecture configuration language
 
-Its frontend is intentionally simple:
+Key properties:
+
+- minimal syntax
+- strong semantics
+- multi-file aware
+- backend-driven architecture
+- compile-time validation
+
+The frontend is:
 
 - deterministic lexer
+- recursive descent parser
+- direct IR construction
 
-- recursive-descent parser
-
-- direct semantic model construction
-
-This design reduces compiler complexity while enabling powerful
-code generation and system configuration capabilities.
+This keeps complexity low while enabling powerful system design.

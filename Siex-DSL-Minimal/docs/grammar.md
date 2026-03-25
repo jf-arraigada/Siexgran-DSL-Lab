@@ -1,19 +1,45 @@
 # Grammar for Siex DSL
 
 The grammar proposed:
+
 ```ebnf
 program         = { top_level_decl } ;
 
 top_level_decl  =
-      module_decl
-    | backend_decl
-    | target_decl
-    | bind_decl
+      import_decl
     | root_decl
+    | module_decl
+    | backend_decl
+    | bind_decl
+    | target_decl
+;
+
+import_decl     =
+    "import" string_literal [ "as" identifier ] ";"
 ;
 
 root_decl       =
-    "root" identifier "=" ("executable" | "library" | "plugin") ";"
+    "root" identifier "{"
+        { root_stmt }
+    "}" ";"
+;
+
+root_stmt       =
+      root_type_decl
+    | main_decl
+    | version_decl
+;
+
+root_type_decl  =
+    "type" ("executable" | "library" | "plugin") ";"
+;
+
+main_decl       =
+    "main" identifier ";"
+;
+
+version_decl    =
+    "version" string_literal ";"
 ;
 
 module_decl     =
@@ -23,18 +49,18 @@ module_decl     =
 ;
 
 module_stmt     =
-      need_decl
-    | sources_block
+      sources_block
     | includes_block
+    | need_decl       
 ;
 
 need_decl       =
-    "need" identifier ";"
+    "need" identifier [ "::" identifier ] ";"
 ;
 
 backend_decl    =
     "backend" identifier (
-        ";" 
+        ";"
       | "{" { impl_decl } "}" ";"
     )
 ;
@@ -44,11 +70,7 @@ impl_decl       =
 ;
 
 bind_decl       =
-    "bind" bind_target "=" bind_value ";"
-;
-
-bind_target     =
-    identifier "." identifier
+    "bind" identifier "=" bind_value ";"
 ;
 
 bind_value      =
@@ -56,15 +78,21 @@ bind_value      =
 ;
 
 target_decl     =
-    "target" identifier (
-        ";" 
+    "target" target_type (
+        ";"
       | "{" { target_stmt } "}" ";"
     )
 ;
 
+target_type     =
+      "embedded"
+    | "metal"
+    | "os"
+;
+
 target_stmt     =
-      (sources_block)
-    | (includes_block)
+      sources_block
+    | includes_block
 ;
 
 sources_block   =
@@ -83,36 +111,78 @@ identifier      = /* IDENT */ ;
 string_literal  = /* STRING */ ;
 ```
 
+---
+### Example of use:
 
-Example of use
 ```Siex
+import "std/logger.siex" as log;
 
-root My_app = executable;
+root app {
+    type executable;
+    main scheduler;
+    version "0.3.0";
+};
 
-backend pq;
+target os {
+    sources {
+        "absolute_path/to/sourceDir/"
+    }
+    includes {
+        "relative_path/to/headerDir/"
+    }
+};
+
+backend pq {
+    impl heap;
+    impl fifo;
+};
+
 backend ring;
 
 module scheduler {
-    need queue;
-    need timer;
-}
+    need logger;
+    need log::formatter; // To eliminate semantic ambiguities
+};
 
 module logger {
-    need queue;
-}
+    sources {
+        "path/to/dir/"
+    }
+};
 
-bind scheduler.queue = pq.heap;
-bind scheduler.timer = ring;
-
-bind logger.queue = pq.intrusive;
-
-target linux;
+bind scheduler = pq.heap;
+bind logger = pq;
 ```
 
-A binding right-hand side may include an optional strategy:
+---
+### Notes
 
-`backend.strategy`
+- Imports:
+An import may define an alias:
+```Siex
+import "file.siex" as alias;
+```
 
-The `need` statement declares that a module requires
-an abstract service which must be satisfied by a backend
-binding at the program level.
+### Need Statement
+
+Supports optional aliasing:
+```Siex
+need module;
+need alias::module;
+```
+
+### Binding
+
+A binding may include an optional implementation:
+```Siex
+backend
+backend.impl
+```
+
+### Target Types
+
+Supported targets:
+- embedded
+- metal
+- os
+
